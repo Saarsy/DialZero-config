@@ -316,11 +316,29 @@ async function connect(){
     device.addEventListener('inputreport', onReport);
     setStatus(true);
 
-    // Ask the firmware for current settings
-    await sendCommand(0x01);
+    // macOS/Chrome needs a brief moment after open() before the device is
+    // actually ready to receive writes - sending immediately can throw
+    // NotAllowedError even though the connection is fine.
+    await new Promise(r => setTimeout(r, 300));
+    await requestConfigWithRetry();
   }catch(err){
     console.error(err);
     setStatus(false);
+  }
+}
+
+async function requestConfigWithRetry(attempt){
+  attempt = attempt || 1;
+  try{
+    await sendCommand(0x01);
+  }catch(err){
+    console.error('GET_CONFIG attempt', attempt, 'failed:', err);
+    if(attempt < 3){
+      await new Promise(r => setTimeout(r, 400));
+      return requestConfigWithRetry(attempt + 1);
+    }
+    // Give up gracefully - keep the page visible, just tell the user
+    showToast('Could not load settings - try Reconnect');
   }
 }
 
