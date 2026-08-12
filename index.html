@@ -38,6 +38,13 @@
   }
   .custom-fields{display:none; gap:8px; margin-top:8px;}
   .custom-fields.show{display:flex;}
+  .keycap{
+    flex:1; padding:10px 12px; background:#10131a; border:1px solid var(--border);
+    color:var(--text); border-radius:8px; font-size:13px; cursor:pointer; text-align:center;
+    user-select:none;
+  }
+  .keycap.listening{border-color:var(--accent); color:var(--accent);}
+  .keycap.empty{color:var(--muted);}
   .custom-fields input{flex:1;}
   .led-row{display:flex; align-items:center; gap:14px;}
   input[type=color]{width:52px; height:40px; border:none; background:none; padding:0; cursor:pointer;}
@@ -79,26 +86,19 @@
       <label>Turn</label>
       <div class="desc">What spinning the knob alone does</div>
       <select id="turnAction"></select>
-      <div class="custom-fields" id="turnAction_custom">
-        <input type="text" id="turnAction_cw" placeholder="CW key (e.g. a)" maxlength="1">
-        <input type="text" id="turnAction_ccw" placeholder="CCW key (e.g. b)" maxlength="1">
-      </div>
+      <div class="custom-fields" id="turnAction_custom"></div>
     </div>
     <div class="row">
       <label>Press</label>
       <div class="desc">What clicking the knob does</div>
       <select id="pressAction"></select>
-      <div class="custom-fields" id="pressAction_custom">
-        <input type="text" id="pressAction_key" placeholder="Key (e.g. a)" maxlength="1">
-      </div>
+      <div class="custom-fields" id="pressAction_custom"></div>
     </div>
     <div class="row">
       <label>Double Press</label>
       <div class="desc">Click the knob twice quickly</div>
       <select id="doublePressAction"></select>
-      <div class="custom-fields" id="doublePressAction_custom">
-        <input type="text" id="doublePressAction_key" placeholder="Key" maxlength="1">
-      </div>
+      <div class="custom-fields" id="doublePressAction_custom"></div>
     </div>
 
     <div class="section-title">Knob (while touching pad)</div>
@@ -106,34 +106,25 @@
       <label>Turn + Touch</label>
       <div class="desc">Requires 2 detents to trigger while touch is held</div>
       <select id="turnTouchAction"></select>
-      <div class="custom-fields" id="turnTouchAction_custom">
-        <input type="text" id="turnTouchAction_cw" placeholder="CW key" maxlength="1">
-        <input type="text" id="turnTouchAction_ccw" placeholder="CCW key" maxlength="1">
-      </div>
+      <div class="custom-fields" id="turnTouchAction_custom"></div>
     </div>
     <div class="row">
       <label>Press + Touch</label>
       <select id="pressTouchAction"></select>
-      <div class="custom-fields" id="pressTouchAction_custom">
-        <input type="text" id="pressTouchAction_key" placeholder="Key" maxlength="1">
-      </div>
+      <div class="custom-fields" id="pressTouchAction_custom"></div>
     </div>
 
     <div class="section-title">Touch Pad</div>
     <div class="row">
       <label>Single Tap</label>
       <select id="tapAction"></select>
-      <div class="custom-fields" id="tapAction_custom">
-        <input type="text" id="tapAction_key" placeholder="Key" maxlength="1">
-      </div>
+      <div class="custom-fields" id="tapAction_custom"></div>
     </div>
     <div class="row">
       <label>Double Tap</label>
       <div class="desc">Always toggles the LED off/on too</div>
       <select id="doubleTapAction"></select>
-      <div class="custom-fields" id="doubleTapAction_custom">
-        <input type="text" id="doubleTapAction_key" placeholder="Key" maxlength="1">
-      </div>
+      <div class="custom-fields" id="doubleTapAction_custom"></div>
     </div>
 
     <div class="section-title">LED</div>
@@ -205,21 +196,111 @@ const OFF = {
   ledMode:27, ledR:28, ledG:29, ledB:30
 };
 
-function charToHidKeycode(ch){
-  // Very small helper: a-z -> HID keycodes 0x04-0x1D, 0-9 -> 0x27,0x1E-0x26
-  if(!ch) return 0;
-  ch = ch.toLowerCase();
-  if(ch >= 'a' && ch <= 'z') return 0x04 + (ch.charCodeAt(0) - 97);
-  if(ch === '0') return 0x27;
-  if(ch >= '1' && ch <= '9') return 0x1E + (ch.charCodeAt(0) - 49);
-  return 0;
+// Maps a JS KeyboardEvent.code to a HID keycode (standard USB HID usage table)
+const JS_CODE_TO_HID = {
+  KeyA:0x04,KeyB:0x05,KeyC:0x06,KeyD:0x07,KeyE:0x08,KeyF:0x09,KeyG:0x0A,KeyH:0x0B,
+  KeyI:0x0C,KeyJ:0x0D,KeyK:0x0E,KeyL:0x0F,KeyM:0x10,KeyN:0x11,KeyO:0x12,KeyP:0x13,
+  KeyQ:0x14,KeyR:0x15,KeyS:0x16,KeyT:0x17,KeyU:0x18,KeyV:0x19,KeyW:0x1A,KeyX:0x1B,
+  KeyY:0x1C,KeyZ:0x1D,
+  Digit1:0x1E,Digit2:0x1F,Digit3:0x20,Digit4:0x21,Digit5:0x22,
+  Digit6:0x23,Digit7:0x24,Digit8:0x25,Digit9:0x26,Digit0:0x27,
+  Enter:0x28,Escape:0x29,Backspace:0x2A,Tab:0x2B,Space:0x2C,
+  Minus:0x2D,Equal:0x2E,BracketLeft:0x2F,BracketRight:0x30,Backslash:0x31,
+  Semicolon:0x33,Quote:0x34,Backquote:0x35,Comma:0x36,Period:0x37,Slash:0x38,
+  F1:0x3A,F2:0x3B,F3:0x3C,F4:0x3D,F5:0x3E,F6:0x3F,F7:0x40,F8:0x41,
+  F9:0x42,F10:0x43,F11:0x44,F12:0x45,
+  Insert:0x49,Home:0x4A,PageUp:0x4B,Delete:0x4C,End:0x4D,PageDown:0x4E,
+  ArrowRight:0x4F,ArrowLeft:0x50,ArrowDown:0x51,ArrowUp:0x52,
+};
+const HID_TO_JS_LABEL = {}; // reverse lookup for display, built below
+const LABEL_OVERRIDES = { Enter:'Enter', Escape:'Esc', Backspace:'Backspace', Tab:'Tab', Space:'Space',
+  ArrowRight:'\u2192', ArrowLeft:'\u2190', ArrowDown:'\u2193', ArrowUp:'\u2191', Delete:'Del' };
+for(const [jsCode, hid] of Object.entries(JS_CODE_TO_HID)){
+  let label = LABEL_OVERRIDES[jsCode] || jsCode.replace('Key','').replace('Digit','');
+  HID_TO_JS_LABEL[hid] = label;
 }
-function hidKeycodeToChar(code){
-  if(code >= 0x04 && code <= 0x1D) return String.fromCharCode(97 + (code-0x04));
-  if(code === 0x27) return '0';
-  if(code >= 0x1E && code <= 0x26) return String.fromCharCode(49 + (code-0x1E));
-  return '';
+
+function modByteToLabel(mod){
+  const parts=[];
+  if(mod & 0x01) parts.push('Ctrl');
+  if(mod & 0x04) parts.push('Alt');
+  if(mod & 0x02) parts.push('Shift');
+  if(mod & 0x08) parts.push(navigator.platform.includes('Mac') ? 'Cmd' : 'Win');
+  return parts;
 }
+function eventToModByte(e){
+  let m = 0;
+  if(e.ctrlKey) m |= 0x01;
+  if(e.shiftKey) m |= 0x02;
+  if(e.altKey) m |= 0x04;
+  if(e.metaKey) m |= 0x08;
+  return m;
+}
+
+// Builds a "click, then press your combo" capture box. Stores mod/code as
+// data attributes so saveConfig() can read them later.
+function makeCaptureBox(containerId, initialMod, initialCode){
+  const div = document.createElement('div');
+  div.className = 'keycap empty';
+  div.tabIndex = 0;
+  div.dataset.mod = initialMod || 0;
+  div.dataset.code = initialCode || 0;
+  renderCaptureBox(div);
+
+  div.addEventListener('click', ()=>{
+    div.classList.add('listening');
+    div.textContent = 'Press keys\u2026';
+  });
+  div.addEventListener('blur', ()=>{
+    div.classList.remove('listening');
+    renderCaptureBox(div);
+  });
+  div.addEventListener('keydown', (e)=>{
+    e.preventDefault();
+    // Ignore pure modifier presses - wait for an actual key
+    if(['Control','Shift','Alt','Meta'].includes(e.key)) return;
+    const hid = JS_CODE_TO_HID[e.code];
+    if(!hid) return; // unsupported key, ignore
+    div.dataset.mod = eventToModByte(e);
+    div.dataset.code = hid;
+    div.classList.remove('listening');
+    renderCaptureBox(div);
+    div.blur();
+  });
+  return div;
+}
+function renderCaptureBox(div){
+  const code = parseInt(div.dataset.code);
+  if(!code){
+    div.textContent = 'Click to set key';
+    div.classList.add('empty');
+    return;
+  }
+  div.classList.remove('empty');
+  const mod = parseInt(div.dataset.mod);
+  const parts = modByteToLabel(mod);
+  parts.push(HID_TO_JS_LABEL[code] || '?');
+  div.textContent = parts.join(' + ');
+}
+
+// Fills every *_custom container with one or two capture boxes
+function buildCustomFields(){
+  const singleIds = ['pressAction','doublePressAction','pressTouchAction','tapAction','doubleTapAction'];
+  singleIds.forEach(id=>{
+    const container = document.getElementById(id+'_custom');
+    container.appendChild(makeCaptureBox(id));
+  });
+  ['turnAction','turnTouchAction'].forEach(id=>{
+    const container = document.getElementById(id+'_custom');
+    const cw = makeCaptureBox(id); cw.dataset.role='cw';
+    const ccw = makeCaptureBox(id); ccw.dataset.role='ccw';
+    const cwLabel = document.createElement('div');
+    cwLabel.style.cssText='font-size:11px;color:var(--muted);text-align:center;margin-bottom:-4px;';
+    container.appendChild(cw);
+    container.appendChild(ccw);
+  });
+}
+buildCustomFields();
 
 async function connect(){
   if(!('hid' in navigator)){
@@ -267,6 +348,17 @@ function onReport(event){
   }
 }
 
+function getCaptureBox(id, role){
+  const container = document.getElementById(id+'_custom');
+  if(role) return container.querySelector(`[data-role="${role}"]`);
+  return container.querySelector('.keycap');
+}
+function setCaptureBox(box, mod, code){
+  box.dataset.mod = mod || 0;
+  box.dataset.code = code || 0;
+  renderCaptureBox(box);
+}
+
 function loadIntoUI(bytes){
   TURN_FIELDS.forEach(id=>{
     document.getElementById(id).value = bytes[OFF[id]];
@@ -276,15 +368,15 @@ function loadIntoUI(bytes){
     document.getElementById(id).value = bytes[OFF[id]];
     toggleCustom(id, bytes[OFF[id]] == PRESS_CUSTOM_INDEX);
   });
-  document.getElementById('turnAction_cw').value = hidKeycodeToChar(bytes[OFF.customTurnCwCode]);
-  document.getElementById('turnAction_ccw').value = hidKeycodeToChar(bytes[OFF.customTurnCcwCode]);
-  document.getElementById('turnTouchAction_cw').value = hidKeycodeToChar(bytes[OFF.customTouchTurnCwCode]);
-  document.getElementById('turnTouchAction_ccw').value = hidKeycodeToChar(bytes[OFF.customTouchTurnCcwCode]);
-  document.getElementById('pressAction_key').value = hidKeycodeToChar(bytes[OFF.customPressCode]);
-  document.getElementById('pressTouchAction_key').value = hidKeycodeToChar(bytes[OFF.customPressTouchCode]);
-  document.getElementById('tapAction_key').value = hidKeycodeToChar(bytes[OFF.customTapCode]);
-  document.getElementById('doubleTapAction_key').value = hidKeycodeToChar(bytes[OFF.customDoubleTapCode]);
-  document.getElementById('doublePressAction_key').value = hidKeycodeToChar(bytes[OFF.customDoublePressCode]);
+  setCaptureBox(getCaptureBox('turnAction','cw'), bytes[OFF.customTurnCwMod], bytes[OFF.customTurnCwCode]);
+  setCaptureBox(getCaptureBox('turnAction','ccw'), bytes[OFF.customTurnCcwMod], bytes[OFF.customTurnCcwCode]);
+  setCaptureBox(getCaptureBox('turnTouchAction','cw'), bytes[OFF.customTouchTurnCwMod], bytes[OFF.customTouchTurnCwCode]);
+  setCaptureBox(getCaptureBox('turnTouchAction','ccw'), bytes[OFF.customTouchTurnCcwMod], bytes[OFF.customTouchTurnCcwCode]);
+  setCaptureBox(getCaptureBox('pressAction'), bytes[OFF.customPressMod], bytes[OFF.customPressCode]);
+  setCaptureBox(getCaptureBox('pressTouchAction'), bytes[OFF.customPressTouchMod], bytes[OFF.customPressTouchCode]);
+  setCaptureBox(getCaptureBox('tapAction'), bytes[OFF.customTapMod], bytes[OFF.customTapCode]);
+  setCaptureBox(getCaptureBox('doubleTapAction'), bytes[OFF.customDoubleTapMod], bytes[OFF.customDoubleTapCode]);
+  setCaptureBox(getCaptureBox('doublePressAction'), bytes[OFF.customDoublePressMod], bytes[OFF.customDoublePressCode]);
 
   document.getElementById('ledMode').value = bytes[OFF.ledMode];
   document.getElementById('ledColorRow').style.display = (bytes[OFF.ledMode]==0) ? 'flex' : 'none';
@@ -299,15 +391,24 @@ async function saveConfig(){
   TURN_FIELDS.forEach(id=> bytes[OFF[id]] = parseInt(document.getElementById(id).value));
   PRESS_FIELDS.forEach(id=> bytes[OFF[id]] = parseInt(document.getElementById(id).value));
 
-  bytes[OFF.customTurnCwCode]  = charToHidKeycode(document.getElementById('turnAction_cw').value);
-  bytes[OFF.customTurnCcwCode] = charToHidKeycode(document.getElementById('turnAction_ccw').value);
-  bytes[OFF.customTouchTurnCwCode]  = charToHidKeycode(document.getElementById('turnTouchAction_cw').value);
-  bytes[OFF.customTouchTurnCcwCode] = charToHidKeycode(document.getElementById('turnTouchAction_ccw').value);
-  bytes[OFF.customPressCode] = charToHidKeycode(document.getElementById('pressAction_key').value);
-  bytes[OFF.customPressTouchCode] = charToHidKeycode(document.getElementById('pressTouchAction_key').value);
-  bytes[OFF.customTapCode] = charToHidKeycode(document.getElementById('tapAction_key').value);
-  bytes[OFF.customDoubleTapCode] = charToHidKeycode(document.getElementById('doubleTapAction_key').value);
-  bytes[OFF.customDoublePressCode] = charToHidKeycode(document.getElementById('doublePressAction_key').value);
+  const cwBox = getCaptureBox('turnAction','cw'), ccwBox = getCaptureBox('turnAction','ccw');
+  bytes[OFF.customTurnCwMod] = parseInt(cwBox.dataset.mod);   bytes[OFF.customTurnCwCode] = parseInt(cwBox.dataset.code);
+  bytes[OFF.customTurnCcwMod] = parseInt(ccwBox.dataset.mod); bytes[OFF.customTurnCcwCode] = parseInt(ccwBox.dataset.code);
+
+  const tcwBox = getCaptureBox('turnTouchAction','cw'), tccwBox = getCaptureBox('turnTouchAction','ccw');
+  bytes[OFF.customTouchTurnCwMod] = parseInt(tcwBox.dataset.mod);   bytes[OFF.customTouchTurnCwCode] = parseInt(tcwBox.dataset.code);
+  bytes[OFF.customTouchTurnCcwMod] = parseInt(tccwBox.dataset.mod); bytes[OFF.customTouchTurnCcwCode] = parseInt(tccwBox.dataset.code);
+
+  const pBox = getCaptureBox('pressAction');
+  bytes[OFF.customPressMod] = parseInt(pBox.dataset.mod); bytes[OFF.customPressCode] = parseInt(pBox.dataset.code);
+  const ptBox = getCaptureBox('pressTouchAction');
+  bytes[OFF.customPressTouchMod] = parseInt(ptBox.dataset.mod); bytes[OFF.customPressTouchCode] = parseInt(ptBox.dataset.code);
+  const tapBox = getCaptureBox('tapAction');
+  bytes[OFF.customTapMod] = parseInt(tapBox.dataset.mod); bytes[OFF.customTapCode] = parseInt(tapBox.dataset.code);
+  const dtBox = getCaptureBox('doubleTapAction');
+  bytes[OFF.customDoubleTapMod] = parseInt(dtBox.dataset.mod); bytes[OFF.customDoubleTapCode] = parseInt(dtBox.dataset.code);
+  const dpBox = getCaptureBox('doublePressAction');
+  bytes[OFF.customDoublePressMod] = parseInt(dpBox.dataset.mod); bytes[OFF.customDoublePressCode] = parseInt(dpBox.dataset.code);
 
   bytes[OFF.ledMode] = parseInt(document.getElementById('ledMode').value);
   const hex = document.getElementById('ledColor').value;
