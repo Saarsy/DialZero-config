@@ -447,6 +447,15 @@ function showToast(msg){
 document.getElementById('connectBtn').addEventListener('click', connect);
 document.getElementById('saveBtn').addEventListener('click', saveConfig);
 
+// Listen for when the USB cable is physically unplugged
+navigator.hid.addEventListener('disconnect', (event) => {
+  if (device && event.device === device) {
+    device.close(); // Release the macOS lock
+    device = null;
+    setStatus(false); // Update the UI to show disconnected
+  }
+});
+  
 if(!('hid' in navigator)){
   document.getElementById('unsupportedMsg').style.display='block';
 }
