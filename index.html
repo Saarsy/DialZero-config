@@ -348,12 +348,14 @@ function setStatus(connected){
   document.getElementById('connectBtn').textContent = connected ? 'Reconnect' : 'Connect Macropad';
   document.getElementById('configArea').classList.toggle('show', connected);
 }
-
+  
 async function sendCommand(cmd, payloadBytes){
   const report = new Uint8Array(RAWHID_REPORT_SIZE);
   report[0] = cmd;
   if(payloadBytes) report.set(payloadBytes, 1);
-  await device.sendReport(0, report);
+  
+  // Send specifically to Report ID 3 to satisfy macOS WebHID routing security
+  await device.sendReport(3, report);
 }
 
 function onReport(event){
