@@ -354,8 +354,8 @@ async function sendCommand(cmd, payloadBytes){
   report[0] = cmd;
   if(payloadBytes) report.set(payloadBytes, 1);
   
-  // Send specifically to Report ID 3 to satisfy macOS WebHID routing security
-  await device.sendReport(3, report);
+  // Send back to Report ID 0 for standard Generic InOut matching
+  await device.sendReport(0, report);
 }
 
 function onReport(event){
