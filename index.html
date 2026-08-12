@@ -307,22 +307,41 @@ async function connect(){
     document.getElementById('unsupportedMsg').style.display='block';
     return;
   }
-  try{
-    const devices = await navigator.hid.requestDevice({filters:[]});
-    if(devices.length === 0) return;
-    device = devices[0];
-    if(!device.opened) await device.open();
+  
+  let success = false;
+  for(let attempt = 1; attempt <= 2; attempt++){
+    try{
+      let devices = await navigator.hid.getDevices();
+      if(devices.length === 0){
+        devices = await navigator.hid.requestDevice({filters:[]});
+      }
+      if(devices.length === 0) return;
+      device = devices[0];
+      if(!device.opened) await device.open();
 
-    device.addEventListener('inputreport', onReport);
-    setStatus(true);
+      device.addEventListener('inputreport', onReport);
+      setStatus(true);
 
-    // macOS/Chrome needs a brief moment after open() before the device is
-    // actually ready to receive writes - sending immediately can throw
-    // NotAllowedError even though the connection is fine.
-    await new Promise(r => setTimeout(r, 300));
-    await requestConfigWithRetry();
-  }catch(err){
-    console.error(err);
+      // macOS/Chrome needs a brief moment after open() before the device is
+      // actually ready to receive writes - sending immediately can throw
+      // NotAllowedError even though the connection is fine.
+      await new Promise(r => setTimeout(r, 300));
+      await requestConfigWithRetry();
+      success = true;
+      break;
+    }catch(err){
+      console.warn(`Connect attempt ${attempt} failed:`, err);
+      if(device && device.opened){
+        try { await device.close(); } catch(e){}
+      }
+      device = null;
+      if(attempt < 2){
+        await new Promise(r => setTimeout(r, 200));
+      }
+    }
+  }
+
+  if(!success){
     setStatus(false);
   }
 }
