@@ -74,7 +74,7 @@
   </div>
 
   <div class="card" id="configArea">
-    <div class="section-title">Encoder (no touch)</div>
+    <div class="section-title">Knob (no touch)</div>
     <div class="row">
       <label>Turn</label>
       <div class="desc">What spinning the knob alone does</div>
@@ -92,8 +92,16 @@
         <input type="text" id="pressAction_key" placeholder="Key (e.g. a)" maxlength="1">
       </div>
     </div>
+    <div class="row">
+      <label>Double Press</label>
+      <div class="desc">Click the knob twice quickly</div>
+      <select id="doublePressAction"></select>
+      <div class="custom-fields" id="doublePressAction_custom">
+        <input type="text" id="doublePressAction_key" placeholder="Key" maxlength="1">
+      </div>
+    </div>
 
-    <div class="section-title">Encoder (while touching pad)</div>
+    <div class="section-title">Knob (while touching pad)</div>
     <div class="row">
       <label>Turn + Touch</label>
       <div class="desc">Requires 2 detents to trigger while touch is held</div>
@@ -125,13 +133,6 @@
       <select id="doubleTapAction"></select>
       <div class="custom-fields" id="doubleTapAction_custom">
         <input type="text" id="doubleTapAction_key" placeholder="Key" maxlength="1">
-      </div>
-    </div>
-    <div class="row">
-      <label>Double Press (encoder)</label>
-      <select id="doublePressAction"></select>
-      <div class="custom-fields" id="doublePressAction_custom">
-        <input type="text" id="doublePressAction_key" placeholder="Key" maxlength="1">
       </div>
     </div>
 
